@@ -1,15 +1,20 @@
 import { useState } from "react";
-import { useOrders, useCreateOrder, OrderWithItems } from "@/hooks/useOrders";
+// import { useOrders, useCreateOrder, OrderWithItems } from "@/hooks/useOrders";
 import { useProducts } from "@/hooks/useProducts";
-import { Plus, Search, Eye } from "lucide-react";
+// import { Plus, Search, Eye } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
+import { Plus, Search, Eye, Trash2 } from "lucide-react"; // Add Trash2
+import { useOrders, useCreateOrder, useDeleteOrder, useUpdateOrderStatus, OrderWithItems } from "@/hooks/useOrders";
+import { toast } from "sonner";
 
 export default function OrdersPage() {
   const { data: orders = [], isLoading } = useOrders();
+  const deleteOrder = useDeleteOrder();
+  const updateStatus = useUpdateOrderStatus();
   const [search, setSearch] = useState("");
   const [viewOrder, setViewOrder] = useState<OrderWithItems | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -62,9 +67,37 @@ export default function OrdersPage() {
                     <td className="py-3 px-5 text-right tabular-nums font-medium">${Number(order.total_amount).toFixed(2)}</td>
                     <td className="py-3 px-5 text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</td>
                     <td className="py-3 px-5">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${order.status === "completed" ? "bg-status-success-bg text-status-success" : order.status === "pending" ? "bg-status-warning-bg text-status-warning" : "bg-status-danger-bg text-status-danger"}`}>
-                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                      </span>
+                      <select
+                        value={order.status}
+                        onChange={(e) => updateStatus.mutate({ id: order.id, status: e.target.value })}
+                        className={`text-xs font-medium px-2 py-1 rounded-md border-none focus:ring-1 focus:ring-primary cursor-pointer
+            ${order.status === "completed" ? "bg-status-success-bg text-status-success" :
+                            order.status === "pending" ? "bg-status-warning-bg text-status-warning" :
+                              "bg-status-danger-bg text-status-danger"}`}
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </td>
+
+                    <td className="py-3 px-5 text-right flex justify-end gap-2">
+                      <button
+                        onClick={() => setViewOrder(order)}
+                        className="p-1.5 hover:bg-card rounded-md shadow-sm transition-opacity"
+                      >
+                        <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm("Delete this order? This cannot be undone.")) {
+                            deleteOrder.mutate(order.id);
+                          }
+                        }}
+                        className="p-1.5 hover:bg-destructive/10 rounded-md transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </button>
                     </td>
                     <td className="py-3 px-5 text-right">
                       <button onClick={() => setViewOrder(order)} className="p-1.5 hover:bg-card rounded-md shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
@@ -72,7 +105,8 @@ export default function OrdersPage() {
                       </button>
                     </td>
                   </motion.tr>
-                ))}
+                )
+                )}
               </tbody>
             </table>
           </div>
@@ -120,8 +154,10 @@ function CreateOrderDialog({ open, onClose }: { open: boolean; onClose: () => vo
   }
 
   const addItem = () => {
-    if (products.length > 0) {
+    if (products && products.length > 0) {
       setItems(prev => [...prev, { product_id: products[0].id, quantity: 1 }]);
+    } else {
+      toast.error("No products available to add");
     }
   };
 

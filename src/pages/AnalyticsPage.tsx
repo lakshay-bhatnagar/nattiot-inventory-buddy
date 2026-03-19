@@ -38,8 +38,8 @@ export default function AnalyticsPage() {
               <LineChart data={data.monthlyData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-                <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `$${v / 1000}k`} />
-                <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, "Revenue"]} contentStyle={{ borderRadius: 8, border: "none", boxShadow: "var(--shadow-card)" }} />
+                <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `₹${v / 1000}k`} />
+                <Tooltip formatter={(value: number) => [`₹${value.toLocaleString()}`, "Revenue"]} contentStyle={{ borderRadius: 8, border: "none", boxShadow: "var(--shadow-card)" }} />
                 <Line type="monotone" dataKey="revenue" stroke="hsl(11, 23%, 61%)" strokeWidth={2} dot={{ fill: "hsl(11, 23%, 61%)", r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
