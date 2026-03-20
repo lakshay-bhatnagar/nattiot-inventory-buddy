@@ -13,8 +13,8 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export default function InventoryPage() {
   const { data: products = [], isLoading } = useProducts();
-  const { role } = useAuth();
-  const isAdmin = role === 'admin';
+  const { role, loading: authLoading } = useAuth();
+  const isAdmin = !authLoading && role === 'admin';
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
@@ -143,8 +143,16 @@ export default function InventoryPage() {
         open={isAddOpen}
         onClose={() => setIsAddOpen(false)}
         onSave={(form) => {
-          createProduct.mutate(form as any);
-          setIsAddOpen(false);
+          createProduct.mutate(form as any, {
+            onSuccess: () => {
+              toast.success("Product added successfully");
+              setIsAddOpen(false);
+            },
+            onError: (error: any) => {
+              // This will tell the user EXACTLY why it failed (e.g., "Permission Denied")
+              toast.error(`Failed to add product: ${error.message}`);
+            }
+          });
         }}
         mode="add"
       />
