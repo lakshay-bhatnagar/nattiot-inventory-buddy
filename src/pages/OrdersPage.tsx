@@ -10,9 +10,12 @@ import { motion } from "framer-motion";
 import { Plus, Search, Eye, Trash2 } from "lucide-react"; // Add Trash2
 import { useOrders, useCreateOrder, useDeleteOrder, useUpdateOrderStatus, OrderWithItems } from "@/hooks/useOrders";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function OrdersPage() {
   const { data: orders = [], isLoading } = useOrders();
+  const { role } = useAuth(); // 1. Get the role
+  const isAdmin = role === 'admin';
   const deleteOrder = useDeleteOrder();
   const updateStatus = useUpdateOrderStatus();
   const [search, setSearch] = useState("");
@@ -30,9 +33,11 @@ export default function OrdersPage() {
           <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
           <p className="text-muted-foreground text-sm mt-1">{orders.length} orders</p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)} className="bg-primary text-primary-foreground hover:brightness-95 shadow-sm gap-2">
-          <Plus className="h-4 w-4" /> New Order
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => setIsCreateOpen(true)} className="bg-primary text-primary-foreground hover:brightness-95 shadow-sm gap-2">
+            <Plus className="h-4 w-4" /> New Order
+          </Button>
+        )}
       </div>
 
       <div className="relative max-w-sm">
@@ -67,18 +72,24 @@ export default function OrdersPage() {
                     <td className="py-3 px-5 text-right tabular-nums font-medium">${Number(order.total_amount).toFixed(2)}</td>
                     <td className="py-3 px-5 text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</td>
                     <td className="py-3 px-5">
-                      <select
-                        value={order.status}
-                        onChange={(e) => updateStatus.mutate({ id: order.id, status: e.target.value })}
-                        className={`text-xs font-medium px-2 py-1 rounded-md border-none focus:ring-1 focus:ring-primary cursor-pointer
-            ${order.status === "completed" ? "bg-status-success-bg text-status-success" :
-                            order.status === "pending" ? "bg-status-warning-bg text-status-warning" :
-                              "bg-status-danger-bg text-status-danger"}`}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
+                      {isAdmin ? (
+                        <select
+                          value={order.status}
+                          onChange={(e) => updateStatus.mutate({ id: order.id, status: e.target.value })}
+                          className={`text-xs font-medium px-2 py-1 rounded-md border-none focus:ring-1 focus:ring-primary cursor-pointer
+                            ${order.status === "completed" ? "bg-status-success-bg text-status-success" :
+                              order.status === "pending" ? "bg-status-warning-bg text-status-warning" :
+                                "bg-status-danger-bg text-status-danger"}`}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="completed">Completed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                      ) : (
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${order.status === "completed" ? "bg-status-success-bg text-status-success" : order.status === "pending" ? "bg-status-warning-bg text-status-warning" : "bg-status-danger-bg text-status-danger"}`}>
+                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                        </span>
+                      )}
                     </td>
 
                     <td className="py-3 px-5 text-right flex justify-end gap-2">
@@ -88,16 +99,18 @@ export default function OrdersPage() {
                       >
                         <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                       </button>
-                      <button
-                        onClick={() => {
-                          if (window.confirm("Delete this order? This cannot be undone.")) {
-                            deleteOrder.mutate(order.id);
-                          }
-                        }}
-                        className="p-1.5 hover:bg-destructive/10 rounded-md transition-colors"
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </button>
+                      {isAdmin && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm("Delete this order? This cannot be undone.")) {
+                              deleteOrder.mutate(order.id);
+                            }
+                          }}
+                          className="p-1.5 hover:bg-destructive/10 rounded-md transition-colors"
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </button>
+                      )}
                     </td>
                     <td className="py-3 px-5 text-right">
                       <button onClick={() => setViewOrder(order)} className="p-1.5 hover:bg-card rounded-md shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">

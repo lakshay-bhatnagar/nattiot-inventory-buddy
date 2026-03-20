@@ -9,9 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function InventoryPage() {
   const { data: products = [], isLoading } = useProducts();
+  const { role } = useAuth();
+  const isAdmin = role === 'admin';
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
@@ -38,9 +41,11 @@ export default function InventoryPage() {
             {products.length} products · {products.reduce((s, p) => s + p.stock_quantity, 0)} total units
           </p>
         </div>
-        <Button onClick={() => setIsAddOpen(true)} className="bg-primary text-primary-foreground hover:brightness-95 shadow-sm gap-2">
-          <Plus className="h-4 w-4" /> Add Product
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => setIsAddOpen(true)} className="...">
+            <Plus className="h-4 w-4" /> Add Product
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -92,13 +97,19 @@ export default function InventoryPage() {
                       <td className="py-3 px-5 text-right tabular-nums font-medium">{product.stock_quantity}</td>
                       <td className="py-3 px-5"><StockBadge stock={product.stock_quantity} threshold={product.threshold} /></td>
                       <td className="py-3 px-5 text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => setEditProduct(product)} className="p-1.5 hover:bg-card rounded-md shadow-sm transition-colors">
-                            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                          </button>
-                          <button onClick={() => deleteProduct.mutate(product.id)} className="p-1.5 hover:bg-status-danger-bg rounded-md transition-colors">
-                            <Trash2 className="h-3.5 w-3.5 text-status-danger" />
-                          </button>
+                        <div className={`flex items-center justify-end gap-1 ${isAdmin ? 'opacity-0 group-hover:opacity-100' : 'hidden'} transition-opacity`}>
+                          {isAdmin && (
+                            <>
+                              <button onClick={() => setEditProduct(product)} className="...">
+                                <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                              </button>
+                              <button onClick={() => {
+                                if (window.confirm("Delete product?")) deleteProduct.mutate(product.id)
+                              }} className="...">
+                                <Trash2 className="h-3.5 w-3.5 text-status-danger" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </motion.tr>
