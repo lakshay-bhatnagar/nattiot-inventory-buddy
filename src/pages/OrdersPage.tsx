@@ -162,7 +162,7 @@ function CreateOrderDialog({ open, onClose }: { open: boolean; onClose: () => vo
   const [docket, setDocket] = useState("");
   const [items, setItems] = useState<{ product_id: string; quantity: number }[]>([]);
 
-  // Initialize with first product if items is empty
+  // Correctly initialize state using useEffect to avoid render-phase updates
   useEffect(() => {
     if (items.length === 0 && products.length > 0) {
       setItems([{ product_id: products[0].id, quantity: 1 }]);
@@ -186,75 +186,78 @@ function CreateOrderDialog({ open, onClose }: { open: boolean; onClose: () => vo
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      {/* CRITICAL: Ensure DialogContent is inside the Dialog component 
-          and check your 'sm:max-w-lg' or similar sizing classes.
-      */}
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+      {/* Explicitly set a width and prevent horizontal overflow */}
+      <DialogContent className="sm:max-w-[500px] w-[95vw] overflow-hidden">
         <DialogHeader>
           <DialogTitle>New Order</DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
+        <div className="space-y-6 py-4">
+          <div className="space-y-2">
             <Label htmlFor="docket">Docket Number</Label>
-            <Input 
-              id="docket" 
-              value={docket} 
-              onChange={(e) => setDocket(e.target.value)} 
-              placeholder="DOC-2024-006" 
+            <Input
+              id="docket"
+              value={docket}
+              onChange={(e) => setDocket(e.target.value)}
+              placeholder="DOC-2024-006"
+              className="w-full" // Ensure full width
             />
           </div>
 
-          <div className="grid gap-3">
+          <div className="space-y-3">
             <Label>Products</Label>
-            {items.map((item, idx) => (
-              <div key={idx} className="flex items-center gap-3">
-                <select 
-                  value={item.product_id}
-                  onChange={(e) => {
-                    const newItems = [...items];
-                    newItems[idx].product_id = e.target.value;
-                    setItems(newItems);
-                  }}
-                  className="flex-1 h-10 rounded-md border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary"
-                >
-                  {products.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} (₹{Number(p.price).toFixed(2)}) — {p.stock_quantity} in stock
-                    </option>
-                  ))}
-                </select>
-                <Input 
-                  type="number" 
-                  min={1} 
-                  value={item.quantity}
-                  onChange={(e) => {
-                    const newItems = [...items];
-                    newItems[idx].quantity = +e.target.value;
-                    setItems(newItems);
-                  }}
-                  className="w-20" 
-                />
-              </div>
-            ))}
-            <Button 
+            <div className="max-h-[300px] overflow-y-auto pr-2 space-y-3"> {/* Added scroll for many items */}
+              {items.map((item, idx) => (
+                <div key={idx} className="flex gap-2 items-center">
+                  <select
+                    value={item.product_id}
+                    onChange={(e) => {
+                      const newItems = [...items];
+                      newItems[idx].product_id = e.target.value;
+                      setItems(newItems);
+                    }}
+                    className="flex-1 min-w-0 h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    {products.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} (₹{Number(p.price).toFixed(2)})
+                      </option>
+                    ))}
+                  </select>
+
+                  <Input
+                    type="number"
+                    min={1}
+                    value={item.quantity}
+                    onChange={(e) => {
+                      const newItems = [...items];
+                      newItems[idx].quantity = +e.target.value;
+                      setItems(newItems);
+                    }}
+                    className="w-20 shrink-0" // Prevent the quantity box from shrinking
+                  />
+                </div>
+              ))}
+            </div>
+
+            <Button
               type="button"
-              variant="outline" 
-              size="sm" 
-              onClick={addItem} 
-              className="w-fit"
+              variant="outline"
+              size="sm"
+              onClick={addItem}
+              className="mt-2"
             >
               <Plus className="h-4 w-4 mr-2" /> Add Item
             </Button>
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button 
-            onClick={handleSave} 
-            disabled={createOrder.isPending} 
-            className="bg-primary text-primary-foreground"
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button
+            onClick={handleSave}
+            disabled={createOrder.isPending}
+            className="bg-primary"
           >
             {createOrder.isPending ? "Creating..." : "Complete Order"}
           </Button>
