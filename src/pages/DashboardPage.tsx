@@ -95,7 +95,7 @@ export default function DashboardPage() {
                 <tr key={order.id} className="border-b border-border/50 hover:bg-accent/30 transition-colors">
                   <td className="py-3 px-5 font-medium">{order.docket_number}</td>
                   <td className="py-3 px-5 text-muted-foreground">{order.order_items.length} item(s)</td>
-                  <td className="py-3 px-5 tabular-nums">${Number(order.total_amount).toFixed(2)}</td>
+                  <td className="py-3 px-5 tabular-nums">₹{Number(order.total_amount).toFixed(2)}</td>
                   <td className="py-3 px-5 text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</td>
                   <td className="py-3 px-5">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${order.status === "completed" ? "bg-status-success-bg text-status-success" : order.status === "pending" ? "bg-status-warning-bg text-status-warning" : "bg-status-danger-bg text-status-danger"}`}>
