@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEffect } from 'react';
 // import { useOrders, useCreateOrder, OrderWithItems } from "@/hooks/useOrders";
 import { useProducts } from "@/hooks/useProducts";
 // import { Plus, Search, Eye } from "lucide-react";
@@ -69,7 +70,7 @@ export default function OrdersPage() {
                     <td className="py-3 px-5 text-muted-foreground">
                       {order.order_items.map(i => i.products?.name).filter(Boolean).join(", ")}
                     </td>
-                    <td className="py-3 px-5 text-right tabular-nums font-medium">${Number(order.total_amount).toFixed(2)}</td>
+                    <td className="py-3 px-5 text-right tabular-nums font-medium">₹{Number(order.total_amount).toFixed(2)}</td>
                     <td className="py-3 px-5 text-muted-foreground">{new Date(order.created_at).toLocaleDateString()}</td>
                     <td className="py-3 px-5">
                       {isAdmin ? (
@@ -137,13 +138,13 @@ export default function OrdersPage() {
                 {viewOrder.order_items.map((item) => (
                   <div key={item.id} className="flex justify-between text-sm py-2 border-b border-border/50">
                     <span>{item.products?.name ?? "Unknown"} × {item.quantity}</span>
-                    <span className="tabular-nums">${(Number(item.price_at_purchase) * item.quantity).toFixed(2)}</span>
+                    <span className="tabular-nums">₹{(Number(item.price_at_purchase) * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
               <div className="flex justify-between font-semibold pt-2">
                 <span>Total</span>
-                <span className="tabular-nums">${Number(viewOrder.total_amount).toFixed(2)}</span>
+                <span className="tabular-nums">₹{Number(viewOrder.total_amount).toFixed(2)}</span>
               </div>
             </div>
           )}
@@ -161,16 +162,16 @@ function CreateOrderDialog({ open, onClose }: { open: boolean; onClose: () => vo
   const [docket, setDocket] = useState("");
   const [items, setItems] = useState<{ product_id: string; quantity: number }[]>([]);
 
-  // Initialize with first product when products load
-  if (items.length === 0 && products.length > 0) {
-    setItems([{ product_id: products[0].id, quantity: 1 }]);
-  }
+  // Initialize with first product if items is empty
+  useEffect(() => {
+    if (items.length === 0 && products.length > 0) {
+      setItems([{ product_id: products[0].id, quantity: 1 }]);
+    }
+  }, [products]);
 
   const addItem = () => {
-    if (products && products.length > 0) {
+    if (products.length > 0) {
       setItems(prev => [...prev, { product_id: products[0].id, quantity: 1 }]);
-    } else {
-      toast.error("No products available to add");
     }
   };
 
@@ -185,30 +186,76 @@ function CreateOrderDialog({ open, onClose }: { open: boolean; onClose: () => vo
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader><DialogTitle>New Order</DialogTitle></DialogHeader>
-        <div className="space-y-4">
-          <div><Label>Docket Number</Label><Input value={docket} onChange={(e) => setDocket(e.target.value)} placeholder="DOC-2024-006" /></div>
-          <div className="space-y-3">
+      {/* CRITICAL: Ensure DialogContent is inside the Dialog component 
+          and check your 'sm:max-w-lg' or similar sizing classes.
+      */}
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>New Order</DialogTitle>
+        </DialogHeader>
+
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="docket">Docket Number</Label>
+            <Input 
+              id="docket" 
+              value={docket} 
+              onChange={(e) => setDocket(e.target.value)} 
+              placeholder="DOC-2024-006" 
+            />
+          </div>
+
+          <div className="grid gap-3">
             <Label>Products</Label>
             {items.map((item, idx) => (
-              <div key={idx} className="flex gap-3">
-                <select value={item.product_id}
-                  onChange={(e) => { const newItems = [...items]; newItems[idx].product_id = e.target.value; setItems(newItems); }}
-                  className="flex-1 h-9 rounded-md border border-input bg-background px-3 text-sm">
-                  {products.map(p => <option key={p.id} value={p.id}>{p.name} (${Number(p.price).toFixed(2)}) — {p.stock_quantity} in stock</option>)}
+              <div key={idx} className="flex items-center gap-3">
+                <select 
+                  value={item.product_id}
+                  onChange={(e) => {
+                    const newItems = [...items];
+                    newItems[idx].product_id = e.target.value;
+                    setItems(newItems);
+                  }}
+                  className="flex-1 h-10 rounded-md border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary"
+                >
+                  {products.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} (₹{Number(p.price).toFixed(2)}) — {p.stock_quantity} in stock
+                    </option>
+                  ))}
                 </select>
-                <Input type="number" min={1} value={item.quantity}
-                  onChange={(e) => { const newItems = [...items]; newItems[idx].quantity = +e.target.value; setItems(newItems); }}
-                  className="w-20" />
+                <Input 
+                  type="number" 
+                  min={1} 
+                  value={item.quantity}
+                  onChange={(e) => {
+                    const newItems = [...items];
+                    newItems[idx].quantity = +e.target.value;
+                    setItems(newItems);
+                  }}
+                  className="w-20" 
+                />
               </div>
             ))}
-            <Button variant="outline" size="sm" onClick={addItem}>+ Add Item</Button>
+            <Button 
+              type="button"
+              variant="outline" 
+              size="sm" 
+              onClick={addItem} 
+              className="w-fit"
+            >
+              <Plus className="h-4 w-4 mr-2" /> Add Item
+            </Button>
           </div>
         </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave} disabled={createOrder.isPending} className="bg-primary text-primary-foreground hover:brightness-95">
+          <Button 
+            onClick={handleSave} 
+            disabled={createOrder.isPending} 
+            className="bg-primary text-primary-foreground"
+          >
             {createOrder.isPending ? "Creating..." : "Complete Order"}
           </Button>
         </DialogFooter>

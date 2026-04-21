@@ -93,11 +93,11 @@ export default function AnalyticsPage() {
           <div className="space-y-4">
             <div className="flex justify-between items-center py-3 border-b border-border/50">
               <span className="text-sm text-muted-foreground">Total Revenue</span>
-              <span className="text-lg font-bold tabular-nums">${data.totalRevenue.toLocaleString()}</span>
+              <span className="text-lg font-bold tabular-nums">₹{data.totalRevenue.toLocaleString()}</span>
             </div>
             <div className="flex justify-between items-center py-3 border-b border-border/50">
               <span className="text-sm text-muted-foreground">Average Order Value</span>
-              <span className="text-lg font-bold tabular-nums">${data.avgOrderValue.toFixed(2)}</span>
+              <span className="text-lg font-bold tabular-nums">₹{data.avgOrderValue.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center py-3 border-b border-border/50">
               <span className="text-sm text-muted-foreground">Total Orders</span>
