@@ -1,6 +1,21 @@
 import { useState } from "react";
 import { useEffect } from 'react';
 // import { useOrders, useCreateOrder, OrderWithItems } from "@/hooks/useOrders";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useProducts } from "@/hooks/useProducts";
 // import { Plus, Search, Eye } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -162,104 +177,104 @@ function CreateOrderDialog({ open, onClose }: { open: boolean; onClose: () => vo
   const [docket, setDocket] = useState("");
   const [items, setItems] = useState<{ product_id: string; quantity: number }[]>([]);
 
-  // Correctly initialize state using useEffect to avoid render-phase updates
   useEffect(() => {
     if (items.length === 0 && products.length > 0) {
       setItems([{ product_id: products[0].id, quantity: 1 }]);
     }
   }, [products]);
 
-  const addItem = () => {
-    if (products.length > 0) {
-      setItems(prev => [...prev, { product_id: products[0].id, quantity: 1 }]);
-    }
-  };
-
-  const handleSave = () => {
-    createOrder.mutate({
-      docketNumber: docket || `DOC-${Date.now()}`,
-      items,
-    }, {
-      onSuccess: () => onClose(),
-    });
+  const updateItem = (index: number, productId: string) => {
+    const newItems = [...items];
+    newItems[index].product_id = productId;
+    setItems(newItems);
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      {/* Explicitly set a width and prevent horizontal overflow */}
-      <DialogContent className="sm:max-w-[500px] w-[95vw] overflow-hidden">
+      <DialogContent className="sm:max-w-[500px] w-[95vw]">
         <DialogHeader>
           <DialogTitle>New Order</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
           <div className="space-y-2">
-            <Label htmlFor="docket">Docket Number</Label>
-            <Input
-              id="docket"
-              value={docket}
-              onChange={(e) => setDocket(e.target.value)}
-              placeholder="DOC-2024-006"
-              className="w-full" // Ensure full width
-            />
+            <Label>Docket Number</Label>
+            <Input value={docket} onChange={(e) => setDocket(e.target.value)} placeholder="DOC-2024-006" />
           </div>
 
           <div className="space-y-3">
             <Label>Products</Label>
-            <div className="max-h-[300px] overflow-y-auto pr-2 space-y-3"> {/* Added scroll for many items */}
+            <div className="max-h-[300px] overflow-y-auto pr-2 space-y-3">
               {items.map((item, idx) => (
                 <div key={idx} className="flex gap-2 items-center">
-                  <select
-                    value={item.product_id}
-                    onChange={(e) => {
-                      const newItems = [...items];
-                      newItems[idx].product_id = e.target.value;
-                      setItems(newItems);
-                    }}
-                    className="flex-1 min-w-0 h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    {products.map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} (₹{Number(p.price).toFixed(2)})
-                      </option>
-                    ))}
-                  </select>
+                  
+                  {/* SEARCHABLE COMBOBOX START */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="flex-1 justify-between font-normal"
+                      >
+                        {item.product_id
+                          ? products.find((p) => p.id === item.product_id)?.name
+                          : "Select product..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[300px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search product..." />
+                        <CommandList>
+                          <CommandEmpty>No product found.</CommandEmpty>
+                          <CommandGroup>
+                            {products.map((product) => (
+                              <CommandItem
+                                key={product.id}
+                                value={product.name} // Command filters based on this value
+                                onSelect={() => updateItem(idx, product.id)}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    item.product_id === product.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {product.name} (₹{Number(product.price).toFixed(2)})
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  {/* SEARCHABLE COMBOBOX END */}
 
-                  <Input
-                    type="number"
-                    min={1}
+                  <Input 
+                    type="number" 
+                    min={1} 
                     value={item.quantity}
                     onChange={(e) => {
                       const newItems = [...items];
                       newItems[idx].quantity = +e.target.value;
                       setItems(newItems);
                     }}
-                    className="w-20 shrink-0" // Prevent the quantity box from shrinking
+                    className="w-20 shrink-0" 
                   />
                 </div>
               ))}
             </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addItem}
-              className="mt-2"
-            >
+            
+            <Button variant="outline" size="sm" onClick={() => setItems([...items, { product_id: products[0].id, quantity: 1 }])}>
               <Plus className="h-4 w-4 mr-2" /> Add Item
             </Button>
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button
-            onClick={handleSave}
-            disabled={createOrder.isPending}
-            className="bg-primary"
-          >
-            {createOrder.isPending ? "Creating..." : "Complete Order"}
+          <Button onClick={() => createOrder.mutate({ docketNumber: docket, items }, { onSuccess: onClose })}>
+            Complete Order
           </Button>
         </DialogFooter>
       </DialogContent>
