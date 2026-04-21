@@ -12,7 +12,16 @@ import AnalyticsPage from "@/pages/AnalyticsPage";
 import AuthPage from "@/pages/AuthPage";
 import NotFound from "@/pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // This prevents the "loading" flicker when switching tabs
+      refetchOnWindowFocus: false,
+      // This keeps data in the cache longer (optional, but recommended)
+      staleTime: 1000 * 60 * 5, // 5 minutes
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
