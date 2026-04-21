@@ -93,7 +93,7 @@ export default function InventoryPage() {
                       </td>
                       <td className="py-3 px-5 text-muted-foreground font-mono text-xs">{product.sku || "—"}</td>
                       <td className="py-3 px-5 text-muted-foreground">{product.category || "—"}</td>
-                      <td className="py-3 px-5 text-right tabular-nums">${Number(product.price).toFixed(2)}</td>
+                      <td className="py-3 px-5 text-right tabular-nums">₹{Number(product.price).toFixed(2)}</td>
                       <td className="py-3 px-5 text-right tabular-nums font-medium">{product.stock_quantity}</td>
                       <td className="py-3 px-5"><StockBadge stock={product.stock_quantity} threshold={product.threshold} /></td>
                       <td className="py-3 px-5 text-right">
