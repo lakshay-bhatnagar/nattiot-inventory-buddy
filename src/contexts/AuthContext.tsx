@@ -39,27 +39,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        await fetchUserRole(session.user.id);
-      }
-      
-      setLoading(false);
+      // 1. Initial check
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      setSession(initialSession);
+      setUser(initialSession?.user ?? null);
 
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-        setLoading(true);
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          await fetchUserRole(session.user.id);
+      if (initialSession?.user) {
+        await fetchUserRole(initialSession.user.id);
+      }
+      setLoading(false); // First load is done
+
+      // 2. Listen for changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+        // ONLY set loading to true if we are switching users or logging in/out for the first time
+        // Do NOT set it to true for session refreshes or tab switches
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+          setLoading(true);
+        }
+
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+
+        if (currentSession?.user) {
+          await fetchUserRole(currentSession.user.id);
         } else {
           setRole(null);
         }
-        
+
         setLoading(false);
       });
 
