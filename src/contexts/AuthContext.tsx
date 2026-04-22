@@ -39,34 +39,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      // 1. Initial check
+      // 1. Initial check (only runs once on mount)
       const { data: { session: initialSession } } = await supabase.auth.getSession();
-      setSession(initialSession);
-      setUser(initialSession?.user ?? null);
 
       if (initialSession?.user) {
+        setUser(initialSession.user);
+        setSession(initialSession);
         await fetchUserRole(initialSession.user.id);
       }
-      setLoading(false); // First load is done
+
+      setLoading(false); // End initial global load
 
       // 2. Listen for changes
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-        // ONLY set loading to true if we are switching users or logging in/out for the first time
-        // Do NOT set it to true for session refreshes or tab switches
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+
+        // LOGIC CHANGE: 
+        // Only show the global loading screen if we don't have a user yet and one is signing in,
+        // or if someone is signing out.
+        // If we ALREADY have a user and it's just a refresh, do NOT set loading to true.
+
+        if (event === 'SIGNED_OUT') {
           setLoading(true);
-        }
-
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-
-        if (currentSession?.user) {
-          await fetchUserRole(currentSession.user.id);
-        } else {
+          setUser(null);
+          setSession(null);
           setRole(null);
-        }
+          setLoading(false);
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          // If we already have a user in state, don't trigger the global loading pulse
+          // Just update the data silently in the background
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
 
-        setLoading(false);
+          if (currentSession?.user) {
+            await fetchUserRole(currentSession.user.id);
+          }
+        }
       });
 
       return subscription;
