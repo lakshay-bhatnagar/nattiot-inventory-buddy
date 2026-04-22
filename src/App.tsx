@@ -16,7 +16,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       // This prevents the "loading" flicker when switching tabs
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,
       // This keeps data in the cache longer (optional, but recommended)
       staleTime: 1000 * 60 * 5, // 5 minutes
     },
