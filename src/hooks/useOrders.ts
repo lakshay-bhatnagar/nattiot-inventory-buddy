@@ -56,6 +56,32 @@ export function useCreateOrder() {
   });
 }
 
+export function useUpdateOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, docketNumber, items }: {
+      id: string;
+      docketNumber: string;
+      items: { product_id: string; quantity: number }[];
+    }) => {
+      const { data, error } = await supabase.rpc("update_order", {
+        p_order_id: id,
+        p_docket_number: docketNumber,
+        p_items: items,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["analytics"] });
+      toast.success("Order updated successfully");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
 export function useDeleteOrder() {
   const qc = useQueryClient();
   return useMutation({

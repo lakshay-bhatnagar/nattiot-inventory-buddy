@@ -23,8 +23,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { Plus, Search, Eye, Trash2 } from "lucide-react"; // Add Trash2
-import { useOrders, useCreateOrder, useDeleteOrder, useUpdateOrderStatus, OrderWithItems } from "@/hooks/useOrders";
+import { Plus, Search, Eye, Pencil, Trash2 } from "lucide-react";
+import { useOrders, useCreateOrder, useDeleteOrder, useUpdateOrder, useUpdateOrderStatus, OrderWithItems } from "@/hooks/useOrders";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -36,6 +36,7 @@ export default function OrdersPage() {
   const updateStatus = useUpdateOrderStatus();
   const [search, setSearch] = useState("");
   const [viewOrder, setViewOrder] = useState<OrderWithItems | null>(null);
+  const [editOrder, setEditOrder] = useState<OrderWithItems | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const filtered = orders.filter(o =>
@@ -117,6 +118,15 @@ export default function OrdersPage() {
                       </button>
                       {isAdmin && (
                         <button
+                          onClick={() => setEditOrder(order)}
+                          className="p-1.5 hover:bg-accent rounded-md transition-colors"
+                          aria-label={`Edit order ${order.docket_number}`}
+                        >
+                          <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <button
                           onClick={() => {
                             if (window.confirm("Delete this order? This cannot be undone.")) {
                               deleteOrder.mutate(order.id);
@@ -127,11 +137,6 @@ export default function OrdersPage() {
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </button>
                       )}
-                    </td>
-                    <td className="py-3 px-5 text-right">
-                      <button onClick={() => setViewOrder(order)} className="p-1.5 hover:bg-card rounded-md shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-                      </button>
                     </td>
                   </motion.tr>
                 )
@@ -167,7 +172,152 @@ export default function OrdersPage() {
       </Dialog>
 
       {isCreateOpen && <CreateOrderDialog open={isCreateOpen} onClose={() => setIsCreateOpen(false)} />}
+      {editOrder && (
+        <EditOrderDialog
+          order={editOrder}
+          onClose={() => setEditOrder(null)}
+        />
+      )}
     </div>
+  );
+}
+
+function EditOrderDialog({ order, onClose }: { order: OrderWithItems; onClose: () => void }) {
+  const { data: products = [] } = useProducts();
+  const updateOrder = useUpdateOrder();
+  const [docket, setDocket] = useState("");
+  const [items, setItems] = useState<{ product_id: string; quantity: number }[]>([]);
+
+  useEffect(() => {
+    setDocket(order.docket_number);
+    setItems(order.order_items.map((item) => ({
+      product_id: item.product_id,
+      quantity: item.quantity,
+    })));
+  }, [order]);
+
+  const updateItem = (index: number, updates: Partial<{ product_id: string; quantity: number }>) => {
+    setItems((current) => current.map((item, itemIndex) =>
+      itemIndex === index ? { ...item, ...updates } : item
+    ));
+  };
+
+  const addItem = () => {
+    const unusedProduct = products.find((product) => !items.some((item) => item.product_id === product.id));
+    setItems((current) => [...current, { product_id: unusedProduct?.id ?? products[0]?.id ?? "", quantity: 1 }]);
+  };
+
+  const save = () => {
+    const docketNumber = docket.trim();
+    if (!docketNumber) {
+      toast.error("Docket number is required");
+      return;
+    }
+    if (items.length === 0) {
+      toast.error("An order must contain at least one item");
+      return;
+    }
+    if (items.some((item) => !item.product_id || !Number.isInteger(item.quantity) || item.quantity <= 0)) {
+      toast.error("Each item needs a valid product and a quantity greater than zero");
+      return;
+    }
+    if (items.some((item) => !products.some((product) => product.id === item.product_id))) {
+      toast.error("One or more selected products are no longer available");
+      return;
+    }
+
+    updateOrder.mutate(
+      { id: order.id, docketNumber, items },
+      { onSuccess: onClose }
+    );
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-[500px] w-[95vw]">
+        <DialogHeader><DialogTitle>Edit Order {order.docket_number}</DialogTitle></DialogHeader>
+
+        <div className="space-y-6 py-4">
+          <div className="space-y-2">
+            <Label>Docket Number</Label>
+            <Input value={docket} onChange={(event) => setDocket(event.target.value)} placeholder="DOC-2024-006" />
+          </div>
+
+          <div className="space-y-3">
+            <Label>Products</Label>
+            <div className="max-h-[300px] overflow-y-auto pr-2 space-y-3">
+              {items.map((item, index) => (
+                <div key={`${item.product_id}-${index}`} className="flex gap-2 items-center">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" role="combobox" className="flex-1 justify-between font-normal">
+                        {item.product_id
+                          ? products.find((product) => product.id === item.product_id)?.name ?? "Select product..."
+                          : "Select product..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[300px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search product..." />
+                        <CommandList>
+                          <CommandEmpty>No product found.</CommandEmpty>
+                          <CommandGroup>
+                            {products.map((product) => {
+                              const selectedElsewhere = items.some((otherItem, otherIndex) =>
+                                otherIndex !== index && otherItem.product_id === product.id
+                              );
+                              return (
+                                <CommandItem
+                                  key={product.id}
+                                  value={product.name}
+                                  disabled={selectedElsewhere}
+                                  onSelect={() => updateItem(index, { product_id: product.id })}
+                                >
+                                  <Check className={cn("mr-2 h-4 w-4", item.product_id === product.id ? "opacity-100" : "opacity-0")} />
+                                  {product.name} (₹{Number(product.price).toFixed(2)})
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={item.quantity}
+                    onChange={(event) => updateItem(index, { quantity: Number(event.target.value) })}
+                    className="w-20 shrink-0"
+                    aria-label="Quantity"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    disabled={items.length === 1}
+                    onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+                    aria-label="Remove item"
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <Button variant="outline" size="sm" onClick={addItem} disabled={products.length === 0}>
+              <Plus className="h-4 w-4 mr-2" /> Add Item
+            </Button>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={updateOrder.isPending}>Cancel</Button>
+          <Button onClick={save} disabled={updateOrder.isPending}>
+            {updateOrder.isPending ? "Saving..." : "Save Changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

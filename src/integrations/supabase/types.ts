@@ -211,6 +211,10 @@ export type Database = {
         Args: { p_docket_number: string; p_items: Json }
         Returns: string
       }
+      update_order: {
+        Args: { p_docket_number: string; p_items: Json; p_order_id: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
