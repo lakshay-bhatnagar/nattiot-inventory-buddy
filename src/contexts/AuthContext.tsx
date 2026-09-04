@@ -71,7 +71,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(currentSession?.user ?? null);
 
           if (currentSession?.user) {
-            await fetchUserRole(currentSession.user.id);
+            // Only fetch if we don't have a role, or if it's a fresh sign-in
+            // This prevents the 'role' from flickering to null/viewer on every tab switch
+            if (!role || event === 'SIGNED_IN') {
+              await fetchUserRole(currentSession.user.id);
+            }
           }
         }
       });

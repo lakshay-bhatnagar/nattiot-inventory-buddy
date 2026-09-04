@@ -23,7 +23,20 @@ export function useCreateProduct() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (product: TablesInsert<"products">) => {
-      const { data, error } = await supabase.from("products").insert(product).select().single();
+      // FORCE REFRESH: Get the current session manually
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        throw new Error("Your session has expired. Please sign in again.");
+      }
+
+      // Explicitly use the session to ensure the headers are current
+      const { data, error } = await supabase
+        .from("products")
+        .insert(product)
+        .select()
+        .single();
+
       if (error) throw error;
       return data;
     },
@@ -31,7 +44,10 @@ export function useCreateProduct() {
       qc.invalidateQueries({ queryKey: ["products"] });
       toast.success("Product added to inventory");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      console.error("Mutation Error:", e);
+      toast.error(e.message);
+    },
   });
 }
 

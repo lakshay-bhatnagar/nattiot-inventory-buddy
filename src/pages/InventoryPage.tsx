@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export default function InventoryPage() {
   const { data: products = [], isLoading } = useProducts();
   const { role, loading: authLoading } = useAuth();
-  const isAdmin = !authLoading && role === 'admin';
+  const isAdmin = role === 'admin';
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
@@ -192,8 +192,25 @@ function ProductDialog({ product, open, onClose, onSave, mode }: {
   };
 
   const handleSave = async () => {
-    const imageUrl = await handleImageUpload();
-    onSave({ ...form, image_url: imageUrl });
+    try {
+      // 1. Check if we are still authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Session expired. Refreshing page...");
+        window.location.reload();
+        return;
+      }
+
+      setUploading(true); // Reuse the uploading state for the whole save process
+      const imageUrl = await handleImageUpload();
+
+      // 2. Pass the data to the onSave prop
+      await onSave({ ...form, image_url: imageUrl });
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
